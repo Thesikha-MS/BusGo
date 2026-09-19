@@ -1,0 +1,804 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bus Reservation System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@600;700&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #E9EFF0;
+    --paper: #FFFFFF;
+    --ink: #10262B;
+    --muted: #4C6167;
+    --teal: #0F5257;
+    --teal-dark: #0A3C40;
+    --sign: #FFC629;
+    --line: #C9D5D8;
+    --booked: #C4CED1;
+    --danger: #B3261E;
+    --ok: #1E7A4C;
+    --display: 'Barlow Condensed', 'Arial Narrow', system-ui, sans-serif;
+    --body: 'Barlow', system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  [hidden] { display: none !important; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--body);
+    font-size: 17px;
+    line-height: 1.5;
+  }
+  h1, h2 { font-family: var(--display); font-weight: 700; letter-spacing: .01em; margin: 0; }
+  h1 { font-size: 2.3rem; line-height: 1.1; }
+  h1:focus { outline: none; }
+  p { margin: 0; }
+
+  /* Header + progress */
+  .site-header { background: var(--teal); color: #fff; }
+  .site-header .inner {
+    max-width: 880px; margin: 0 auto; padding: 16px 20px;
+    display: flex; align-items: center; gap: 14px;
+  }
+  .brand-sign {
+    background: var(--sign); color: var(--ink);
+    font-family: var(--display); font-weight: 700; font-size: 1.5rem;
+    padding: 2px 12px; border-radius: 6px; letter-spacing: .02em;
+  }
+  .brand-name { font-family: var(--display); font-weight: 600; font-size: 1.4rem; }
+
+  .steps { background: var(--paper); border-bottom: 1px solid var(--line); }
+  .steps ol {
+    max-width: 880px; margin: 0 auto; padding: 0 20px; list-style: none;
+    display: flex; gap: 6px;
+  }
+  .steps li {
+    flex: 1; padding: 12px 4px 10px; font-size: .95rem; color: var(--muted);
+    border-bottom: 4px solid transparent; text-align: center;
+  }
+  .steps li.done { color: var(--teal); border-bottom-color: var(--teal); }
+  .steps li[aria-current="step"] { color: var(--ink); font-weight: 600; border-bottom-color: var(--sign); }
+
+  main { max-width: 880px; margin: 0 auto; padding: 28px 20px 60px; }
+  .lead { color: var(--muted); margin-top: 6px; }
+  .card {
+    background: var(--paper); border: 1px solid var(--line); border-radius: 14px;
+    padding: 22px; margin-top: 22px;
+  }
+
+  /* Forms */
+  .search-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px; align-items: end; }
+  .search-grid .btn { grid-column: 1 / -1; width: 100%; }
+  label { display: block; font-weight: 600; margin-bottom: 6px; font-size: .95rem; }
+  input[type="text"], input[type="number"] {
+    width: 100%; height: 48px; padding: 0 14px; font: inherit; color: var(--ink);
+    background: #fff; border: 2px solid var(--line); border-radius: 10px;
+  }
+  input:disabled { background: var(--bg); color: var(--muted); cursor: not-allowed; }
+  input:focus-visible, button:focus-visible {
+    outline: 3px solid var(--sign); outline-offset: 2px; border-color: var(--teal);
+  }
+  .btn {
+    height: 48px; padding: 0 24px; font: inherit; font-weight: 600; cursor: pointer;
+    border-radius: 10px; border: 2px solid var(--teal); background: var(--teal); color: #fff;
+  }
+  .btn:hover { background: var(--teal-dark); border-color: var(--teal-dark); }
+  .btn.secondary { background: #fff; color: var(--teal); }
+  .btn.secondary:hover { background: var(--bg); }
+  .btn:disabled { opacity: .6; cursor: wait; }
+  .error { color: var(--danger); font-weight: 500; margin-top: 12px; min-height: 1.5em; }
+
+  /* Route results: names only */
+  .results { margin-top: 26px; }
+  .results h2 { font-size: 1.5rem; margin-bottom: 10px; }
+  .route-list { list-style: none; margin: 0; padding: 0; display: grid; gap: 10px; }
+  .route-list li {
+    background: var(--paper); border: 1px solid var(--line);
+    border-left: 8px solid var(--sign); border-radius: 10px;
+    padding: 14px 18px; font-family: var(--display); font-size: 1.45rem; font-weight: 600;
+  }
+  .empty { background: var(--paper); border: 1px dashed var(--line); border-radius: 10px; padding: 16px 18px; color: var(--muted); }
+  .results .btn { margin-top: 16px; }
+
+  /* Seat layout */
+  .page-head { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; align-items: flex-end; }
+  .trip-meta { color: var(--muted); margin-top: 6px; }
+  .legend { display: flex; gap: 22px; justify-content: center; margin: 22px 0 18px; font-size: .95rem; }
+  .legend span { display: inline-flex; align-items: center; gap: 8px; }
+  .swatch { width: 20px; height: 20px; border-radius: 5px 5px 3px 3px; border: 2px solid var(--teal); background: #fff; }
+  .swatch.booked { background: var(--booked); border-color: var(--booked); }
+
+  .bus {
+    width: min(100%, 340px); margin: 0 auto; background: #fff;
+    border: 3px solid var(--teal); border-radius: 40px 40px 14px 14px; padding: 18px 16px 20px;
+  }
+  .bus-front {
+    display: flex; justify-content: space-between; align-items: center;
+    border-bottom: 2px dashed var(--line); padding-bottom: 12px; margin-bottom: 14px;
+    color: var(--muted); font-size: .9rem;
+  }
+  .bus-front svg { width: 34px; height: 34px; stroke: var(--teal); }
+  .seat-row { display: grid; grid-template-columns: 1fr 1fr 28px 1fr 1fr; gap: 8px; margin-bottom: 8px; }
+  .seat {
+    height: 46px; font: inherit; font-weight: 600; color: var(--teal); background: #fff;
+    border: 2px solid var(--teal); border-radius: 10px 10px 5px 5px; cursor: pointer;
+  }
+  .seat:hover:not(:disabled) { background: var(--sign); color: var(--ink); border-color: var(--ink); }
+  .seat:disabled { background: var(--booked); border-color: var(--booked); color: #6E7F84; cursor: not-allowed; }
+  .hint { text-align: center; color: var(--muted); margin-top: 16px; font-size: .95rem; }
+
+  /* Summary + payment */
+  .summary { display: grid; grid-template-columns: repeat(2, 1fr); gap: 14px 20px; margin: 0; }
+  .summary dt { color: var(--muted); font-size: .9rem; }
+  .summary dd { margin: 0; font-weight: 600; font-size: 1.1rem; }
+  .summary .wide { grid-column: 1 / -1; }
+  .pay-box { max-width: 420px; margin-top: 22px; }
+  .note { margin-top: 10px; color: var(--muted); font-size: .92rem; }
+  .actions { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 20px; }
+
+  /* Ticket */
+  .status {
+    display: inline-block; background: #DDF1E6; color: var(--ok); font-weight: 600;
+    padding: 3px 12px; border-radius: 999px; font-size: .95rem; margin-top: 10px;
+  }
+  .ticket {
+    display: grid; grid-template-columns: 1fr 170px; margin-top: 22px; position: relative;
+    background: #fff; border: 2px solid var(--teal); border-radius: 16px; overflow: hidden;
+  }
+  .ticket-main { padding: 24px; }
+  .ticket-main h2 { font-size: 1.7rem; margin-bottom: 16px; }
+  .ticket-stub {
+    position: relative; background: var(--sign); border-left: 2px dashed var(--teal);
+    display: flex; flex-direction: column; align-items: center; justify-content: center; padding: 20px 10px;
+    text-align: center;
+  }
+  .ticket-stub::before, .ticket-stub::after {
+    content: ""; position: absolute; left: -14px; width: 26px; height: 26px; border-radius: 50%;
+    background: var(--bg); border: 2px solid var(--teal);
+  }
+  .ticket-stub::before { top: -14px; }
+  .ticket-stub::after { bottom: -14px; }
+  .stub-label { font-size: .9rem; }
+  .stub-seat { font-family: var(--display); font-weight: 700; font-size: 4.2rem; line-height: 1; }
+
+  @media (max-width: 720px) {
+    h1 { font-size: 2rem; }
+    .search-grid { grid-template-columns: 1fr; }
+    .steps li { font-size: .8rem; }
+    .ticket { grid-template-columns: 1fr; }
+    .ticket-stub { border-left: 0; border-top: 2px dashed var(--teal); flex-direction: row; gap: 14px; }
+    .ticket-stub::before, .ticket-stub::after { display: none; }
+    .stub-seat { font-size: 2.6rem; }
+    .summary { grid-template-columns: 1fr; }
+  }
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+  @media print {
+    body { background: #fff; }
+    .site-header, .steps, .actions, .page-head .lead { display: none !important; }
+    .ticket { break-inside: avoid; }
+  }
+</style>
+</head>
+<body>
+
+<header class="site-header">
+  <div class="inner">
+    <span class="brand-sign">BUS</span>
+    <span class="brand-name">Bus Reservation System</span>
+  </div>
+</header>
+
+<nav class="steps" aria-label="Booking progress">
+  <ol id="steps">
+    <li>Search</li>
+    <li>Select seat</li>
+    <li>Payment</li>
+    <li>Booking details</li>
+  </ol>
+</nav>
+
+<main>
+
+  <!-- 1. SEARCH -->
+  <section id="page-search">
+    <h1>Find your bus</h1>
+    <p class="lead">Choose where you are going, then pick from the buses and dates that are available.</p>
+
+    <form id="searchForm" class="card" novalidate>
+      <div class="search-grid">
+        <div>
+          <label for="origin">Origin</label>
+          <input type="text" id="origin" list="originList" placeholder="e.g. Chennai" autocomplete="off">
+        </div>
+        <div>
+          <label for="destination">Destination</label>
+          <input type="text" id="destination" list="destList" placeholder="e.g. Bangalore" autocomplete="off">
+        </div>
+        <div>
+          <label for="bus">Available bus</label>
+          <input type="text" id="bus" list="busList" placeholder="Choose origin and destination first" autocomplete="off" disabled>
+        </div>
+        <div>
+          <label for="date">Available date</label>
+          <input type="text" id="date" list="dateList" placeholder="Choose a bus first" maxlength="10" autocomplete="off" disabled>
+        </div>
+        <button type="submit" class="btn">Search buses</button>
+      </div>
+      <p id="searchError" class="error" role="alert"></p>
+      <datalist id="originList"></datalist>
+      <datalist id="destList"></datalist>
+      <datalist id="busList"></datalist>
+      <datalist id="dateList"></datalist>
+    </form>
+
+    <div id="results" class="results" hidden>
+      <h2>Available buses</h2>
+      <ul id="routeList" class="route-list"></ul>
+      <p id="noResults" class="empty" hidden>No buses run on this route. Check the origin and destination and search again.</p>
+      <button type="button" id="selectSeatBtn" class="btn" hidden>Select seat</button>
+    </div>
+  </section>
+
+  <!-- 2. SEAT SELECTION -->
+  <section id="page-seats" hidden>
+    <div class="page-head">
+      <div>
+        <h1>Select your seat</h1>
+        <p class="trip-meta" id="seatTripMeta"></p>
+      </div>
+      <button type="button" class="btn secondary" id="backToSearch">Back to search</button>
+    </div>
+
+    <div class="card">
+      <div class="legend">
+        <span><i class="swatch"></i> Available</span>
+        <span><i class="swatch booked"></i> Booked</span>
+      </div>
+      <div class="bus">
+        <div class="bus-front">
+          <span>Front</span>
+          <span style="display:inline-flex;align-items:center;gap:8px;">Driver
+            <svg viewBox="0 0 24 24" fill="none" stroke-width="2" aria-hidden="true">
+              <circle cx="12" cy="12" r="9"/><circle cx="12" cy="12" r="2.5"/>
+              <path d="M12 9.5V3M9.8 13.2 4 16M14.2 13.2 20 16"/>
+            </svg>
+          </span>
+        </div>
+        <div id="seatMap"></div>
+      </div>
+      <p class="hint">Tap an available seat to continue to payment.</p>
+    </div>
+  </section>
+
+  <!-- 3. PAYMENT (demo) -->
+  <section id="page-payment" hidden>
+    <div class="page-head">
+      <div>
+        <h1>Payment</h1>
+        <p class="trip-meta">Demo payment. No card, password or login is needed.</p>
+      </div>
+      <button type="button" class="btn secondary" id="backToSeats">Back to seats</button>
+    </div>
+
+    <div class="card">
+      <dl class="summary">
+        <div class="wide"><dt>Bus</dt><dd id="payRoute"></dd></div>
+        <div><dt>Travel date</dt><dd id="payDate"></dd></div>
+        <div><dt>Seat</dt><dd id="paySeat"></dd></div>
+        <div><dt>Fare to pay</dt><dd id="payFare"></dd></div>
+      </dl>
+
+      <form id="payForm" class="pay-box" novalidate>
+        <label for="amount">Amount (₹)</label>
+        <input type="number" id="amount" min="0" step="1" inputmode="numeric" placeholder="Enter the fare amount">
+        <p id="payError" class="error" role="alert"></p>
+        <div class="actions">
+          <button type="submit" class="btn" id="payBtn">Pay now</button>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <!-- 4. BOOKING DETAILS -->
+  <section id="page-ticket" hidden>
+    <h1>Booking confirmed</h1>
+    <span class="status">Payment received</span>
+
+    <div class="ticket">
+      <div class="ticket-main">
+        <h2 id="tRoute"></h2>
+        <dl class="summary">
+          <div><dt>Booking ID</dt><dd id="tId"></dd></div>
+          <div><dt>Travel date</dt><dd id="tDate"></dd></div>
+          <div><dt>From</dt><dd id="tFrom"></dd></div>
+          <div><dt>To</dt><dd id="tTo"></dd></div>
+          <div><dt>Amount paid</dt><dd id="tAmount"></dd></div>
+          <div><dt>Booked on</dt><dd id="tBooked"></dd></div>
+        </dl>
+      </div>
+      <div class="ticket-stub">
+        <span class="stub-label">Seat number</span>
+        <span class="stub-seat" id="tSeat"></span>
+      </div>
+    </div>
+
+    <div class="actions">
+      <button type="button" class="btn" id="printBtn">Print ticket</button>
+      <button type="button" class="btn secondary" id="newBookingBtn">Book another ticket</button>
+    </div>
+  </section>
+
+</main>
+
+<script>
+(function () {
+  'use strict';
+
+  /* ---------- Data ---------- */
+  // Days of the week (0 = Sunday ... 6 = Saturday) on which a bus runs.
+  // Edit these lists to change which dates appear in the date dropdown.
+  var DAILY = [0, 1, 2, 3, 4, 5, 6];
+  var WEEKDAYS_ONLY = [1, 2, 3, 4, 5];
+
+  // [from, to, bus name, fare, days it runs]
+  var BASE_ROUTES = [
+    ['Chennai', 'Bangalore', 'Express', 650, DAILY],
+    ['Chennai', 'Hyderabad', 'Superfast', 1100, [1, 3, 5, 6]],      // Mon, Wed, Fri, Sat
+    ['Chennai', 'Coimbatore', 'Night Rider', 800, DAILY],
+    ['Chennai', 'Madurai', 'Sleeper', 750, DAILY],
+    ['Chennai', 'Trichy', 'Intercity', 450, DAILY],
+    ['Chennai', 'Pondicherry', 'Coastal Link', 300, [0, 5, 6]],     // Fri, Sat, Sun
+    ['Chennai', 'Tirupati', 'Pilgrim Express', 350, [2, 4, 6]],     // Tue, Thu, Sat
+    ['Bangalore', 'Hyderabad', 'Deluxe', 900, [0, 2, 4, 6]],        // Sun, Tue, Thu, Sat
+    ['Bangalore', 'Kochi', 'Malabar Express', 950, DAILY],
+    ['Coimbatore', 'Kochi', 'Ghat Line', 400, [1, 3, 5]],           // Mon, Wed, Fri
+    ['Madurai', 'Coimbatore', 'Highway Star', 500, DAILY],
+    ['Salem', 'Bangalore', 'Hill Rider', 400, WEEKDAYS_ONLY]
+  ];
+
+  var BOOKING_DAYS = 30;       // tickets can be booked for today and the next 29 days
+
+  // Build both directions for every route
+  var ROUTES = [];
+  var citySet = {};
+  BASE_ROUTES.forEach(function (r) {
+    ROUTES.push({ from: r[0], to: r[1], name: r[0] + ' to ' + r[1] + ' ' + r[2], fare: r[3], days: r[4] });
+    ROUTES.push({ from: r[1], to: r[0], name: r[1] + ' to ' + r[0] + ' ' + r[2], fare: r[3], days: r[4] });
+    citySet[r[0]] = true; citySet[r[1]] = true;
+  });
+  var CITIES = Object.keys(citySet).sort();
+
+  var WEEKDAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  var MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+  var ROWS = 12;               // 12 rows x 4 seats = 48 seats
+  var TOTAL_SEATS = ROWS * 4;
+
+  /* ---------- State ---------- */
+  var state = { matches: [], route: null, date: '', seat: null, amount: 0 };
+
+  /* ---------- Helpers ---------- */
+  function $(id) { return document.getElementById(id); }
+
+  var pages = { search: $('page-search'), seats: $('page-seats'), payment: $('page-payment'), ticket: $('page-ticket') };
+  var order = ['search', 'seats', 'payment', 'ticket'];
+  var stepEls = $('steps').children;
+
+  function go(name) {
+    var idx = order.indexOf(name);
+    order.forEach(function (p) { pages[p].hidden = (p !== name); });
+    for (var i = 0; i < stepEls.length; i++) {
+      stepEls[i].classList.toggle('done', i < idx);
+      if (i === idx) stepEls[i].setAttribute('aria-current', 'step');
+      else stepEls[i].removeAttribute('aria-current');
+    }
+    window.scrollTo(0, 0);
+    var h = pages[name].querySelector('h1');
+    h.setAttribute('tabindex', '-1');
+    h.focus({ preventScroll: true });
+  }
+
+  function money(n) { return '₹' + Number(n).toLocaleString('en-IN'); }
+
+  function pad(n) { return (n < 10 ? '0' : '') + n; }
+
+  function fmtDMY(dt) { return pad(dt.getDate()) + '-' + pad(dt.getMonth() + 1) + '-' + dt.getFullYear(); }
+
+  // Validate dd-mm-yyyy, real calendar date, not in the past
+  function checkDate(text) {
+    var m = /^(\d{2})-(\d{2})-(\d{4})$/.exec(text);
+    if (!m) return 'Choose a date from the list, or type it as dd-mm-yyyy.';
+    var d = +m[1], mo = +m[2], y = +m[3];
+    var dt = new Date(y, mo - 1, d);
+    if (dt.getFullYear() !== y || dt.getMonth() !== mo - 1 || dt.getDate() !== d) {
+      return 'That date does not exist. Choose a date from the list.';
+    }
+    var today = new Date(); today.setHours(0, 0, 0, 0);
+    if (dt < today) return 'The travel date cannot be in the past.';
+    return '';
+  }
+
+  // Deterministic "already booked" seats for a route + date
+  function hash(str) {
+    var h = 2166136261;
+    for (var i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); }
+    return h >>> 0;
+  }
+  function seededBooked(key) {
+    var s = hash(key), set = {};
+    for (var n = 1; n <= TOTAL_SEATS; n++) {
+      s = (Math.imul(s, 1664525) + 1013904223) >>> 0;
+      if ((s >>> 16) % 100 < 28) set[n] = true;
+    }
+    return set;
+  }
+
+  // Seats booked in this browser are remembered too
+  function storeKey() { return 'busres:' + state.route.name + '|' + state.date; }
+  function loadBooked() {
+    try { return JSON.parse(localStorage.getItem(storeKey())) || []; } catch (e) { return []; }
+  }
+  function saveBooked(list) {
+    try { localStorage.setItem(storeKey(), JSON.stringify(list)); } catch (e) { /* storage unavailable */ }
+  }
+
+  /* ---------- Page 1: search ---------- */
+  var originInput = $('origin');
+  var destInput = $('destination');
+  var busInput = $('bus');
+  var dateInput = $('date');
+
+  // Return the properly spelled city name for what was typed, or '' if it is not a known city
+  function canonCity(text) {
+    var v = text.trim().toLowerCase();
+    for (var i = 0; i < CITIES.length; i++) {
+      if (CITIES[i].toLowerCase() === v) return CITIES[i];
+    }
+    return '';
+  }
+
+  // Cities that have a direct bus from the given city
+  function citiesFrom(city) {
+    var seen = {}, out = [];
+    ROUTES.forEach(function (r) {
+      if (r.from === city && !seen[r.to]) { seen[r.to] = true; out.push(r.to); }
+    });
+    return out.sort();
+  }
+
+  function routesBetween(from, to) {
+    return ROUTES.filter(function (r) { return r.from === from && r.to === to; });
+  }
+
+  // Dates (today onward, within the booking window) on which this bus actually runs
+  function availableDates(route) {
+    var out = [];
+    var t = new Date(); t.setHours(0, 0, 0, 0);
+    for (var i = 0; i < BOOKING_DAYS; i++) {
+      var dt = new Date(t.getFullYear(), t.getMonth(), t.getDate() + i);
+      if (route.days.indexOf(dt.getDay()) !== -1) {
+        out.push({
+          value: fmtDMY(dt),
+          label: WEEKDAYS[dt.getDay()] + ', ' + dt.getDate() + ' ' + MONTHS[dt.getMonth()] + ' ' + dt.getFullYear()
+        });
+      }
+    }
+    return out;
+  }
+
+  // The bus currently chosen in the form, or null
+  function selectedRoute() {
+    var o = canonCity(originInput.value);
+    var d = canonCity(destInput.value);
+    if (!o || !d) return null;
+    var text = busInput.value.trim().toLowerCase();
+    var found = routesBetween(o, d).filter(function (r) { return r.name.toLowerCase() === text; });
+    return found[0] || null;
+  }
+
+  function fillList(listId, options) {
+    var list = $(listId);
+    list.innerHTML = '';
+    options.forEach(function (item) {
+      var o = document.createElement('option');
+      if (typeof item === 'string') {
+        o.value = item;
+      } else {
+        o.value = item.value;
+        o.label = item.label;
+      }
+      list.appendChild(o);
+    });
+  }
+
+  // Date box: offer only the dates on which the chosen bus runs
+  function refreshDates() {
+    var route = selectedRoute();
+    var dates = route ? availableDates(route) : [];
+    fillList('dateList', dates);
+
+    if (!route) {
+      dateInput.disabled = true;
+      dateInput.value = '';
+      dateInput.placeholder = 'Choose a bus first';
+      return;
+    }
+    dateInput.disabled = false;
+    dateInput.placeholder = 'Choose an available date';
+    var current = dateInput.value.trim();
+    var stillValid = dates.some(function (x) { return x.value === current; });
+    if (!stillValid) dateInput.value = '';
+  }
+
+  // Rebuild the suggestion boxes so they only offer options that really exist
+  function refreshLists() {
+    var o = canonCity(originInput.value);
+    var d = canonCity(destInput.value);
+
+    // Destination box: only cities reachable from the chosen origin
+    fillList('destList', o ? citiesFrom(o) : CITIES);
+
+    // Origin box: only cities that have a bus to the chosen destination
+    fillList('originList', d ? citiesFrom(d) : CITIES);
+
+    // Bus box: only buses that run between origin and destination
+    var buses = (o && d) ? routesBetween(o, d) : [];
+    fillList('busList', buses.map(function (r) { return r.name; }));
+
+    var names = buses.map(function (r) { return r.name.toLowerCase(); });
+    var current = busInput.value.trim().toLowerCase();
+
+    if (!o || !d) {
+      busInput.disabled = true;
+      busInput.value = '';
+      busInput.placeholder = 'Choose origin and destination first';
+    } else if (buses.length === 0) {
+      busInput.disabled = true;
+      busInput.value = '';
+      busInput.placeholder = 'No buses run on this route';
+    } else {
+      busInput.disabled = false;
+      busInput.placeholder = buses.length > 1 ? 'Choose a bus' : 'Bus on this route';
+      if (names.indexOf(current) === -1) {
+        // Auto-select when there is only one bus, otherwise ask the user to pick
+        busInput.value = buses.length === 1 ? buses[0].name : '';
+      }
+    }
+
+    refreshDates();
+  }
+
+  // When the user picks a city that has no bus to the other one, clear the other box
+  function pairHasNoBus() {
+    var o = canonCity(originInput.value);
+    var d = canonCity(destInput.value);
+    return !!(o && d && routesBetween(o, d).length === 0);
+  }
+
+  function hideResults() {
+    $('results').hidden = true;
+    $('searchError').textContent = '';
+  }
+
+  originInput.addEventListener('input', function () {
+    if (pairHasNoBus()) destInput.value = '';
+    refreshLists();
+    hideResults();
+  });
+  destInput.addEventListener('input', function () {
+    if (pairHasNoBus()) originInput.value = '';
+    refreshLists();
+    hideResults();
+  });
+  busInput.addEventListener('input', function () {
+    refreshDates();
+    hideResults();
+  });
+
+  // A datalist only shows options matching the text already in the box. To show the full set of
+  // available options again, empty the box when it gets focus and restore it if left untouched.
+  function showAllOnFocus(input) {
+    var saved = '';
+    input.addEventListener('focus', function () {
+      saved = input.value;
+      if (saved) input.value = '';
+    });
+    input.addEventListener('blur', function () {
+      if (input.value === '' && saved) input.value = saved;
+      saved = '';
+    });
+  }
+  showAllOnFocus(originInput);
+  showAllOnFocus(destInput);
+  showAllOnFocus(busInput);
+  showAllOnFocus(dateInput);
+
+  // Auto-insert hyphens if the user types a date instead of picking one
+  dateInput.addEventListener('input', function (e) {
+    var digits = e.target.value.replace(/\D/g, '').slice(0, 8);
+    var out = digits;
+    if (digits.length > 4) out = digits.slice(0, 2) + '-' + digits.slice(2, 4) + '-' + digits.slice(4);
+    else if (digits.length > 2) out = digits.slice(0, 2) + '-' + digits.slice(2);
+    e.target.value = out;
+    hideResults();
+  });
+
+  $('searchForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var origin = originInput.value.trim();
+    var dest = destInput.value.trim();
+    var date = dateInput.value.trim();
+    var busText = busInput.value.trim().toLowerCase();
+    var err = $('searchError');
+    err.textContent = '';
+    $('results').hidden = true;
+
+    if (!origin || !dest || !date) { err.textContent = 'Fill in the origin, destination and date.'; return; }
+    if (origin.toLowerCase() === dest.toLowerCase()) { err.textContent = 'Origin and destination must be different.'; return; }
+    var dateErr = checkDate(date);
+    if (dateErr) { err.textContent = dateErr; return; }
+
+    var matches = ROUTES.filter(function (r) {
+      return r.from.toLowerCase() === origin.toLowerCase() && r.to.toLowerCase() === dest.toLowerCase();
+    });
+
+    if (matches.length > 0) {
+      if (busText) {
+        matches = matches.filter(function (r) { return r.name.toLowerCase() === busText; });
+        if (matches.length === 0) { err.textContent = 'Choose a bus from the list.'; return; }
+      } else if (matches.length > 1) {
+        err.textContent = 'Choose a bus from the list.';
+        return;
+      }
+
+      // The date must be one the bus actually runs on
+      var runs = availableDates(matches[0]).some(function (x) { return x.value === date; });
+      if (!runs) {
+        err.textContent = 'This bus does not run on that date. Choose a date from the list.';
+        return;
+      }
+    }
+
+    state.matches = matches;
+    state.date = date;
+
+    // Show route names only
+    var list = $('routeList');
+    list.innerHTML = '';
+    state.matches.forEach(function (r) {
+      var li = document.createElement('li');
+      li.textContent = r.name;
+      list.appendChild(li);
+    });
+    var found = state.matches.length > 0;
+    $('noResults').hidden = found;
+    $('selectSeatBtn').hidden = !found;
+    list.hidden = !found;
+    $('results').hidden = false;
+  });
+
+  $('selectSeatBtn').addEventListener('click', function () {
+    state.route = state.matches[0];
+    state.seat = null;
+    renderSeats();
+    go('seats');
+  });
+
+  /* ---------- Page 2: seat layout ---------- */
+  function renderSeats() {
+    $('seatTripMeta').textContent = state.route.name + '  |  ' + state.date;
+    var booked = seededBooked(state.route.name + '|' + state.date);
+    loadBooked().forEach(function (n) { booked[n] = true; });
+
+    var map = $('seatMap');
+    map.innerHTML = '';
+    for (var r = 0; r < ROWS; r++) {
+      var row = document.createElement('div');
+      row.className = 'seat-row';
+      for (var c = 0; c < 5; c++) {
+        if (c === 2) { row.appendChild(document.createElement('span')); continue; } // aisle
+        var n = r * 4 + (c < 2 ? c : c - 1) + 1;
+        var b = document.createElement('button');
+        b.type = 'button';
+        b.className = 'seat';
+        b.textContent = n;
+        b.dataset.seat = n;
+        if (booked[n]) {
+          b.disabled = true;
+          b.setAttribute('aria-label', 'Seat ' + n + ', booked');
+        } else {
+          b.setAttribute('aria-label', 'Seat ' + n + ', available');
+        }
+        row.appendChild(b);
+      }
+      map.appendChild(row);
+    }
+  }
+
+  $('seatMap').addEventListener('click', function (e) {
+    var btn = e.target.closest('.seat');
+    if (!btn || btn.disabled) return;
+    state.seat = +btn.dataset.seat;
+    renderPayment();
+    go('payment');
+  });
+
+  $('backToSearch').addEventListener('click', function () { go('search'); });
+
+  /* ---------- Page 3: dummy payment ---------- */
+  function renderPayment() {
+    $('payRoute').textContent = state.route.name;
+    $('payDate').textContent = state.date;
+    $('paySeat').textContent = state.seat;
+    $('payFare').textContent = money(state.route.fare);
+    $('amount').value = '';
+    $('payError').textContent = '';
+    $('payBtn').disabled = false;
+    $('payBtn').textContent = 'Pay now';
+  }
+
+  $('backToSeats').addEventListener('click', function () { renderSeats(); go('seats'); });
+
+  $('payForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var raw = $('amount').value.trim();
+    var err = $('payError');
+    err.textContent = '';
+    if (raw === '') { err.textContent = 'Enter the amount to pay.'; return; }
+    var amt = Number(raw);
+    if (!isFinite(amt) || amt <= 0) { err.textContent = 'Enter a valid amount.'; return; }
+    if (amt !== state.route.fare) {
+      err.textContent = 'The amount must be ' + money(state.route.fare) + ' for this seat.';
+      return;
+    }
+    state.amount = amt;
+    var btn = $('payBtn');
+    btn.disabled = true;
+    btn.textContent = 'Processing...';
+    setTimeout(confirmBooking, 700);
+  });
+
+  /* ---------- Page 4: booking details ---------- */
+  function confirmBooking() {
+    var booked = loadBooked();
+    if (booked.indexOf(state.seat) === -1) booked.push(state.seat);
+    saveBooked(booked);
+
+    var now = new Date();
+    var stamp = pad(now.getDate()) + '-' + pad(now.getMonth() + 1) + '-' + now.getFullYear() +
+                ', ' + pad(now.getHours()) + ':' + pad(now.getMinutes());
+    var id = 'BR' + Math.floor(100000 + Math.random() * 900000);
+
+    $('tId').textContent = id;
+    $('tRoute').textContent = state.route.name;
+    $('tFrom').textContent = state.route.from;
+    $('tTo').textContent = state.route.to;
+    $('tDate').textContent = state.date;
+    $('tSeat').textContent = state.seat;
+    $('tAmount').textContent = money(state.amount);
+    $('tBooked').textContent = stamp;
+    go('ticket');
+  }
+
+  $('printBtn').addEventListener('click', function () { window.print(); });
+
+  $('newBookingBtn').addEventListener('click', function () {
+    $('searchForm').reset();
+    $('searchError').textContent = '';
+    $('results').hidden = true;
+    state = { matches: [], route: null, date: '', seat: null, amount: 0 };
+    refreshLists();
+    go('search');
+  });
+
+  refreshLists();
+  go('search');
+})();
+</script>
+</body>
+</html>
